@@ -137,7 +137,7 @@ if video_file is not None:
             os.system(f"ffmpeg -i {target} -vf subtitles={srtfilename} {output_video}")
 
             # Affichage de la vidéo avec les sous-titres
-            with open(output_video, "rb") as f:
+            with open(video_file, "rb") as f:
                 video_bytes = f.read()
             st.video(video_bytes)
 
