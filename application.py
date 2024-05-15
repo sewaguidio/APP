@@ -102,7 +102,7 @@ langue_selectionnee = st.selectbox("Sélectionnez une langue", langues)
 lang = langue_selectionnee.split("(")[1].split(")")[0]
 
 if st.button("Générer les sous-titres"):
-    if video_file is not None and cle and lang:
+    if video_file is not None  and lang:
         # 1. Extraction de l'audio
         mp3url = extraire_audio(video_file.name)
 
@@ -122,7 +122,7 @@ if st.button("Générer les sous-titres"):
         srtfilename = output_filename
 
         # Fonction pour générer les clips de texte à partir des sous-titres
-        generator = lambda txt: TextClip(txt, font='Arial', fontsize=24, color='white')
+        generator = lambda txt: TextClip(txt, font='Arial', fontsize=18, color='white')
 
         # Charger le fichier de sous-titres avec l'encodage spécifié
         subtitles = SubtitlesClip(output_filename, generator, encoding='utf-8')
