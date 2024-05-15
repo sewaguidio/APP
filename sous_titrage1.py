@@ -27,7 +27,7 @@ def extraire_audio(chemin_video):
     audio.write_audiofile(sortie_audio)
     return sortie_audio
 
-def getDeepgramTranscription(file_path, deepgramapiKey, lang ):
+def getDeepgramTranscription(file_path, lang ):
     # Use this to get subtitles in English
     if lang == "fr" : 
         url = "https://api.deepgram.com/v1/listen?model=whisper-large&language=fr&punctuate=true&diarize=true&smart_format=true"
@@ -39,7 +39,7 @@ def getDeepgramTranscription(file_path, deepgramapiKey, lang ):
     #url = "https://api.deepgram.com/v1/listen?model=whisper-large&detect_language=true"
 
     headers = {
-        "Authorization": 'Token ' + deepgramapiKey,
+        "Authorization": 'Token ' + "cb011716c36c35506d18ba9ce382f30355055be1",
     }
 
     with open(file_path, 'rb') as audio_file:
@@ -85,7 +85,7 @@ def convert_to_srt(datas, output_filename, lang):
 
 
 # Liste des langues disponibles
-langues = ["Français (fr)", "Anglais (en)", "Ewe (ee)", "Yoruba (yo)"]
+langues = [ "Anglais (en)", "Ewe (ee)", "Yoruba (yo)"]
 
 st.title("Générer des sous-titres pour une vidéo")
 
@@ -93,7 +93,7 @@ st.title("Générer des sous-titres pour une vidéo")
 video_file = st.file_uploader("Choisir une vidéo", type=["mp4"])
 
 # Saisir la clé DeepGram
-cle = st.text_input("Entrez votre clé DeepGram")
+#cle = st.text_input("Entrez votre clé DeepGram")
 
 # Sélectionner la langue
 langue_selectionnee = st.selectbox("Sélectionnez une langue", langues)
@@ -107,7 +107,7 @@ if st.button("Générer les sous-titres"):
         mp3url = extraire_audio(video_file.name)
 
         # 2. Transcription de l'audio
-        output1 = getDeepgramTranscription(mp3url, cle, lang)
+        output1 = getDeepgramTranscription(mp3url, lang)
 
         # 3. Extraction de la partie de la transcription pour le sous-titrage
         subtitle_data1 = output1['results']['channels'][0]['alternatives'][0]['paragraphs']['paragraphs']
