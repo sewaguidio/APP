@@ -122,7 +122,7 @@ if st.button("Générer les sous-titres"):
         srtfilename = output_filename
 
         # Fonction pour générer les clips de texte à partir des sous-titres
-        generator = lambda txt: TextClip(txt, font='Arial', fontsize=18, color='white')
+        generator = lambda txt: TextClip(txt, fontsize=18, color='white')
 
         # Charger le fichier de sous-titres avec l'encodage spécifié
         subtitles = SubtitlesClip(output_filename, generator, encoding='utf-8')
