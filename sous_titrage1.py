@@ -14,6 +14,9 @@ from moviepy.editor import VideoFileClip, AudioFileClip
 import numpy as  np
 from deep_translator import GoogleTranslator
 import streamlit as st
+from moviepy.editor import *
+from moviepy.video.tools.subtitles import SubtitlesClip
+
 
 
 def extraire_audio(chemin_video):
@@ -90,8 +93,6 @@ st.title("Transcription et sous-titrage de vidéo")
 # Charger la vidéo
 video_file = st.file_uploader("Charger une vidéo", type=["mp4", "mov", "avi"])
 
-
-
 if video_file is not None:
     # Saisie de la clé d'API Deepgram
     cle = st.text_input("Entrez votre clé ")
@@ -126,20 +127,33 @@ if video_file is not None:
 
             # Écriture d'un fichier de sous-titres (.srt) avec les timestamps mot par mot
             convert_to_srt(subtitle_data1, output_filename, lang)
-
             srtfilename = output_filename
+
             st.write(f"Sous-titres générés : {srtfilename}")
 
-            target = os.path.basename(video_file.name)
-            output_video = target.replace(".mp4", "_transcrit.mp4")
+            # Fonction pour générer les clips de texte à partir des sous-titres
+            generator = lambda txt: TextClip(txt, font='Arial', fontsize=24, color='white')
 
-            # Cette opération prendra 2-3 minutes
-            os.system(f"ffmpeg -i {target} -vf subtitles={srtfilename} {target}")
+            # Charger le fichier de sous-titres avec l'encodage spécifié
+            subtitles = SubtitlesClip(output_filename, generator, encoding='utf-8')
+
+            # Charger la vidéo
+            video = VideoFileClip(temp_video_path)
+
+            # Positionner les sous-titres en bas au milieu
+            subtitles = subtitles.set_position(('center', 'bottom'))
+
+            # Combiner la vidéo et les sous-titres
+            result = CompositeVideoClip([video, subtitles])
+
+            # Écrire la nouvelle vidéo avec les sous-titres
+            result.write_videofile(temp_video_path)
 
             # Affichage de la vidéo avec les sous-titres
-            with open(video_file, "rb") as f:
+            with open(temp_video_path, "rb") as f:
                 video_bytes = f.read()
             st.video(video_bytes)
 
-    else:
-        st.warning("Veuillez entrer une clé d'API Deepgram valide et sélectionner une langue.")
+        else:
+            st.warning("Veuillez entrer une clé d'API Deepgram valide et sélectionner une langue.")
+			
