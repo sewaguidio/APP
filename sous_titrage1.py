@@ -1,12 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-!pip install --quiet ipython-autotime
-# %load_ext autotime
-!pip install moviepy
-!pip install deep_translator
-!pip install streamlit
-!pip install numpy
-"""
+
 import tempfile
 import os
 import requests
@@ -14,6 +7,7 @@ from moviepy.editor import VideoFileClip, AudioFileClip
 import numpy as  np
 from deep_translator import GoogleTranslator
 import streamlit as st
+from io import BytesIO
 
 
 def extraire_audio(chemin_video):
@@ -81,6 +75,8 @@ def convert_to_srt(datas, output_filename, lang):
             f.write(f"{subtitle_text}\n\n")
 
 
+
+
 # Liste des langues disponibles
 langues = ["Français (fr)", "Anglais (en)", "Ewe (ee)", "Yoruba (yo)"]
 
@@ -89,8 +85,6 @@ st.title("Transcription et sous-titrage de vidéo")
 
 # Charger la vidéo
 video_file = st.file_uploader("Charger une vidéo", type=["mp4", "mov", "avi"])
-
-
 
 if video_file is not None:
     # Saisie de la clé d'API Deepgram
@@ -111,7 +105,8 @@ if video_file is not None:
         # Bouton pour lancer la transcription
         if st.button("Transcrire"):
             # 1. Extraction de l'audio
-            mp3url = extraire_audio(temp_video_path)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
+                mp3url = extraire_audio(temp_video_path, temp_audio.name)
 
             # 2. Transcription de l'audio
             output1 = getDeepgramTranscription(mp3url, cle, lang)
@@ -125,21 +120,28 @@ if video_file is not None:
             output_filename = name + ".srt"
 
             # Écriture d'un fichier de sous-titres (.srt) avec les timestamps mot par mot
-            convert_to_srt(subtitle_data1, output_filename, lang)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".srt", mode="w", encoding="utf-8") as temp_srt:
+                convert_to_srt(subtitle_data1, temp_srt.name, lang)
+                srtfilename = temp_srt.name
 
-            srtfilename = output_filename
             st.write(f"Sous-titres générés : {srtfilename}")
 
             target = os.path.basename(video_file.name)
             output_video = target.replace(".mp4", "_transcrit.mp4")
 
             # Cette opération prendra 2-3 minutes
-            os.system(f"ffmpeg -i {target} -vf subtitles={srtfilename} {output_video}")
+            os.system(f"ffmpeg -i {temp_video_path} -vf subtitles={srtfilename} {output_video}")
 
             # Affichage de la vidéo avec les sous-titres
             with open(output_video, "rb") as f:
                 video_bytes = f.read()
             st.video(video_bytes)
+
+            # Suppression des fichiers temporaires
+            os.remove(temp_video_path)
+            os.remove(mp3url)
+            os.remove(srtfilename)
+            os.remove(output_video)
 
     else:
         st.warning("Veuillez entrer une clé d'API Deepgram valide et sélectionner une langue.")
