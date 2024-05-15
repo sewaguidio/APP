@@ -14,6 +14,9 @@ from moviepy.editor import VideoFileClip, AudioFileClip
 import numpy as  np
 from deep_translator import GoogleTranslator
 import streamlit as st
+from moviepy.editor import *
+from moviepy.video.tools.subtitles import SubtitlesClip
+
 
 
 def extraire_audio(chemin_video):
@@ -84,62 +87,60 @@ def convert_to_srt(datas, output_filename, lang):
 # Liste des langues disponibles
 langues = ["Français (fr)", "Anglais (en)", "Ewe (ee)", "Yoruba (yo)"]
 
-# Interface Streamlit
-st.title("Transcription et sous-titrage de vidéo")
+st.title("Générer des sous-titres pour une vidéo")
 
-# Charger la vidéo
-video_file = st.file_uploader("Charger une vidéo", type=["mp4", "mov", "avi"])
+# Télécharger la vidéo
+video_file = st.file_uploader("Choisir une vidéo", type=["mp4"])
 
+# Saisir la clé DeepGram
+cle = st.text_input("Entrez votre clé DeepGram")
 
+# Sélectionner la langue
+langue_selectionnee = st.selectbox("Sélectionnez une langue", langues)
 
-if video_file is not None:
-    # Saisie de la clé d'API Deepgram
-    cle = st.text_input("Entrez votre clé ")
+# Extraire le code de langue
+lang = langue_selectionnee.split("(")[1].split(")")[0]
 
-    # Sélection de la langue
-    langue_selectionnee = st.selectbox("Sélectionnez la langue", langues)
+if st.button("Générer les sous-titres"):
+    if video_file is not None and cle and lang:
+        # 1. Extraction de l'audio
+        mp3url = extraire_audio(video_file.name)
 
-    if cle and langue_selectionnee:
-        # Extraction du code de langue
-        lang = langue_selectionnee.split("(")[1].split(")")[0]
+        # 2. Transcription de l'audio
+        output1 = getDeepgramTranscription(mp3url, cle, lang)
 
-        # Enregistrement du fichier téléchargé dans un emplacement temporaire
-        with tempfile.NamedTemporaryFile(delete=False) as temp_video:
-            temp_video.write(video_file.read())
-            temp_video_path = temp_video.name
+        # 3. Extraction de la partie de la transcription pour le sous-titrage
+        subtitle_data1 = output1['results']['channels'][0]['alternatives'][0]['paragraphs']['paragraphs']
 
-        # Bouton pour lancer la transcription
-        if st.button("Transcrire"):
-            # 1. Extraction de l'audio
-            mp3url = extraire_audio(temp_video_path)
+        # Extraction du nom de fichier
+        filename = os.path.basename(mp3url)
+        name, extension = os.path.splitext(filename)
+        output_filename = name + ".srt"
 
-            # 2. Transcription de l'audio
-            output1 = getDeepgramTranscription(mp3url, cle, lang)
+        # Écriture d'un fichier de sous-titres (.srt) avec les timestamps mot par mot
+        convert_to_srt(subtitle_data1, output_filename, lang)
+        srtfilename = output_filename
 
-            # 3. Extraction de partie de la transcription pour le sous-titrage
-            subtitle_data1 = output1['results']['channels'][0]['alternatives'][0]['paragraphs']['paragraphs']
+        # Fonction pour générer les clips de texte à partir des sous-titres
+        generator = lambda txt: TextClip(txt, font='Arial', fontsize=24, color='white')
 
-            # Extraction du nom de fichier
-            filename = os.path.basename(mp3url)
-            name, extension = os.path.splitext(filename)
-            output_filename = name + ".srt"
+        # Charger le fichier de sous-titres avec l'encodage spécifié
+        subtitles = SubtitlesClip(output_filename, generator, encoding='utf-8')
 
-            # Écriture d'un fichier de sous-titres (.srt) avec les timestamps mot par mot
-            convert_to_srt(subtitle_data1, output_filename, lang)
+        # Charger la vidéo
+        video = VideoFileClip(video_file.name)
 
-            srtfilename = output_filename
-            st.write(f"Sous-titres générés : {srtfilename}")
+        # Positionner les sous-titres en bas au milieu
+        subtitles = subtitles.set_position(('center', 'bottom'))
 
-            target = os.path.basename(video_file.name)
-            output_video = target.replace(".mp4", "_transcrit.mp4")
+        # Combiner la vidéo et les sous-titres
+        result = CompositeVideoClip([video, subtitles])
 
-            # Cette opération prendra 2-3 minutes
-            os.system(f"ffmpeg -i {target} -vf subtitles={srtfilename} {output_video}")
+        # Écrire la nouvelle vidéo avec les sous-titres
+        out_file = f"{name}_with_subtitles.mp4"
+        result.write_videofile(out_file)
 
-            # Affichage de la vidéo avec les sous-titres
-            with open(video_file, "rb") as f:
-                video_bytes = f.read()
-            st.video(video_bytes)
-
+        # Afficher la vidéo avec sous-titres
+        st.video(out_file)
     else:
-        st.warning("Veuillez entrer une clé d'API Deepgram valide et sélectionner une langue.")
+        st.warning("Veuillez télécharger une vidéo, entrer une clé DeepGram et sélectionner une langue.")
